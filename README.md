@@ -3,6 +3,8 @@
 
 This is a simple Flask app that interacts with a MySQL database. The app allows users to submit messages, which are then stored in the database and displayed on the frontend.
 
+![TWO-TIER-FLASK-APP](https://github.com/gopeshthakare13/2026-Projects/blob/main/Project-Images/flask-app.png)
+
 ## Prerequisites
 
 Before you begin, make sure you have the following installed:
@@ -14,7 +16,7 @@ Before you begin, make sure you have the following installed:
 
 1. Clone this repository (if you haven't already):
 
-   ```bash
+   ```
    git clone https://github.com/your-username/your-repo-name.git
    ```
 
