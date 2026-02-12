@@ -15,11 +15,16 @@ pipeline {
             }
         }
 
-        stage("OWASP Dependency Check") {
-            steps {
-                dependencyCheck additionalArguments: '--scan .', odcInstallation: 'OWASP-DC'
-            }
+       stage('OWASP Dependency Check') {
+           steps {
+                dependencyCheck odcInstallation: 'OWASP',
+                additionalArguments: '--scan . --format XML',
+                outdir: 'dependency-check-report'
+
+               dependencyCheckPublisher pattern: 'dependency-check-report/dependency-check-report.xml'
+           }
         }
+
 
         stage("Code Build") {
             steps {
