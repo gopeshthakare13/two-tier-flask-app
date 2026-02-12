@@ -11,27 +11,43 @@ pipeline {
 
         stage("Trivy File System Scan") {
             steps {
-                sh "trivy fs . --format json -o results.json"
-            }
-        }
-     stage('OWASP Dependency Check') {
-           steps {
-           withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_KEY')]) {
-            dependencyCheck odcInstallation: 'OWASP',
-            additionalArguments: "--scan . --format XML --nvdApiKey $NVD_KEY"
-        }
-          dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-        }
-    }
-        stage("Code Build") {
-            steps {
-                sh "docker build -t two-tier-flask-app ."
+                sh """
+                    trivy fs . \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 1
+                """
             }
         }
 
-        stage("Test Case") {
+        stage("OWASP Dependency Check") {
             steps {
-                echo "Developer Write Test Cases Here ...."
+                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_KEY')]) {
+                    dependencyCheck(
+                        odcInstallation: 'OWASP',
+                        additionalArguments: "--scan . --format XML --nvdApiKey ${NVD_KEY}"
+                    )
+                }
+
+                dependencyCheckPublisher(
+                    pattern: '**/dependency-check-report.xml',
+                    failedTotalHigh: 1
+                )
+            }
+        }
+
+        stage("Code Build") {
+            steps {
+                sh "docker build -t two-tier-flask-app:latest ."
+            }
+        }
+
+        stage("Trivy Docker Image Scan") {
+            steps {
+                sh """
+                    trivy image two-tier-flask-app:latest \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 1
+                """
             }
         }
 
@@ -39,23 +55,24 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: "dockerHubCreds",
-                    passwordVariable: "DOCKER_PASS",
-                    usernameVariable: "DOCKER_USER"
+                    usernameVariable: "DOCKER_USER",
+                    passwordVariable: "DOCKER_PASS"
                 )]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker tag two-tier-flask-app $DOCKER_USER/two-tier-flask-app:latest
-                        docker push $DOCKER_USER/two-tier-flask-app:latest
-                    '''
+                    sh """
+                        echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+                        docker tag two-tier-flask-app:latest ${DOCKER_USER}/two-tier-flask-app:latest
+                        docker push ${DOCKER_USER}/two-tier-flask-app:latest
+                    """
                 }
             }
         }
 
         stage("Deploy") {
             steps {
-                sh "docker compose down || true"
-                sh "docker rm -f mysql || true"
-                sh "docker compose up -d"
+                sh """
+                    docker compose down || true
+                    docker compose up -d
+                """
             }
         }
     }
@@ -78,3 +95,4 @@ pipeline {
         }
     }
 }
+
