@@ -1,98 +1,75 @@
-pipeline {
-    agent { label "dev" }
-
-    stages {
-
-        stage("Code Clone") {
-            steps {
-                git url: "https://github.com/gopeshthakare13/two-tier-flask-app.git"
+pipeline{
+    agent {label "dev"} ;
+    stages{
+        stage("Code Clone"){
+            steps{
+                git url : "https://github.com/gopeshthakare13/two-tier-flask-app.git"
             }
         }
-
-        stage("Trivy File System Scan") {
-            steps {
-                sh """
-                    trivy fs . \
-                    --scanners vuln \
-                    --severity HIGH,CRITICAL \
-                    --exit-code 1
-                """
+        stages{
+        stage("Trivy File System Scan"){
+            steps{
+                sh "trivy fs . -o results.json"
             }
         }
-
-      stage("OWASP Dependency Check") {
-          steps {
-             withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_KEY')]) {
-              dependencyCheck(
-                odcInstallation: 'OWASP',
-                additionalArguments: "--scan . --format XML --format HTML --out . --nvdApiKey ${NVD_KEY}"
-            )
-        }
-
-        dependencyCheckPublisher(
-            pattern: '**/dependency-check-report.xml'
-        )
-       }
-      }
-
-
-        stage("Docker Build") {
-            steps {
-                sh "docker build -t two-tier-flask-app:latest ."
+         stage("Installation Command To Docker Build"){
+            steps{
+                sh '''
+                  sudo apt update
+                  sudo apt install -y docker.io docker-compose-v2
+                  sudo usermod -aG docker ubuntu
+                  sudo usermod -aG docker $USER
+                  newgrp docker
+                   '''
             }
         }
-
-        stage("Trivy Docker Image Scan") {
-            steps {
-                sh """
-                    trivy image two-tier-flask-app:latest \
-                    --severity HIGH,CRITICAL \
-                    --exit-code 1
-                """
+        stage("Code Build"){
+            steps{
+                sh "docker build -t two-tier-flask-app ."
             }
         }
-
-        stage("Docker Push") {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: "dockerHubCreds",
-                    usernameVariable: "DOCKER_USER",
-                    passwordVariable: "DOCKER_PASS"
-                )]) {
-                    sh """
-                        echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
-                        docker tag two-tier-flask-app:latest ${DOCKER_USER}/two-tier-flask-app:latest
-                        docker push ${DOCKER_USER}/two-tier-flask-app:latest
-                    """
+        stage("Test Case"){
+            steps{
+                echo "Developer Write Test Cases Here ...."
+            }
+        }
+       stage("Docker Push") {
+             steps {
+                 withCredentials([usernamePassword(
+                 credentialsId: "dockerHubCreds",
+                 passwordVariable: "DOCKER_PASS",
+                 usernameVariable: "DOCKER_USER"
+               )]) {
+                 sh '''
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker tag two-tier-flask-app $DOCKER_USER/two-tier-flask-app:latest
+                    docker push $DOCKER_USER/two-tier-flask-app:latest
+                    '''
                 }
-            }
-        }
-
-        stage("Deploy") {
-            steps {
-                sh """
-                    docker compose down || true
-                    docker compose up -d
-                """
+           }
+       }
+        stage("Deploy"){
+            steps{
+               sh "docker compose down || true"
+               sh "docker rm -f mysql || true"
+               sh "docker compose up -d"
             }
         }
     }
-
-    post {
-        success {
-            mail(
-                to: "gopesh7710@gmail.com",
-                subject: "Build Successful - ${env.JOB_NAME}",
-                body: "Your build was successful.\nBuild URL: ${env.BUILD_URL}"
-            )
-        }
-
-        failure {
-            mail(
-                to: "gopesh7710@gmail.com",
-                subject: "Build Failed - ${env.JOB_NAME}",
-                body: "Build failed due to errors or vulnerabilities.\nCheck: ${env.BUILD_URL}"
-            )
-        }
+post {                           /* Email Notifiaction */
+    success {
+        mail(
+            to: "gopesh7710@gmail.com",
+            subject: "Build Successful",
+            body: "Good: Your Build Was Successful!"
+        )
     }
+    failure {
+        mail(
+            to: "gopesh7710@gmail.com",
+            subject: "Build Failed",
+            body: "Bad: Your Build Failed!"
+        )
+    }
+}
 }
