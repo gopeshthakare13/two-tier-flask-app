@@ -13,6 +13,7 @@ pipeline {
             steps {
                 sh """
                     trivy fs . \
+                    --scanners vuln \
                     --severity HIGH,CRITICAL \
                     --exit-code 1
                 """
@@ -35,7 +36,7 @@ pipeline {
             }
         }
 
-        stage("Code Build") {
+        stage("Docker Build") {
             steps {
                 sh "docker build -t two-tier-flask-app:latest ."
             }
@@ -82,7 +83,7 @@ pipeline {
             mail(
                 to: "gopesh7710@gmail.com",
                 subject: "Build Successful - ${env.JOB_NAME}",
-                body: "Good: Your Build Was Successful!\nBuild URL: ${env.BUILD_URL}"
+                body: "Your build was successful.\nBuild URL: ${env.BUILD_URL}"
             )
         }
 
@@ -90,9 +91,8 @@ pipeline {
             mail(
                 to: "gopesh7710@gmail.com",
                 subject: "Build Failed - ${env.JOB_NAME}",
-                body: "Bad: Your Build Failed!\nCheck: ${env.BUILD_URL}"
+                body: "Build failed due to errors or vulnerabilities.\nCheck: ${env.BUILD_URL}"
             )
         }
     }
 }
-
