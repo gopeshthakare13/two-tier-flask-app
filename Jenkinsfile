@@ -2,9 +2,8 @@ pipeline{
     agent {label "dev"} ;
 
      tools {
-        dependencyCheck 'OWASP-DC'                                            /* OWASP :-  Your project uses third-party libraries (like Flask, requests, MySQL connector).
+        dependencyCheck 'OWASP-DC'                             /* OWASP :-  Your project uses third-party libraries (like Flask, requests, MySQL connector).
                                                                                             Some versions may have known security vulnerabilities. */
-
                                                                                           /*Solution:
                                                                                                Use OWASP Dependency-Check in Jenkins pipeline.*/
     }
@@ -16,9 +15,9 @@ pipeline{
             }
         }
         
-        stage("Trivy File System Scan){                                                /*Trivy Trivy is a security scanner for code, containers, Kubernetes, and IaC */
+        stage("Trivy File System Scan){                                                
             steps{
-               sh "trivy fs . --format json -o results.json"
+               sh "trivy fs . --format json -o results.json"         /*Trivy Trivy is a security scanner for code, containers, Kubernetes, and IaC */
             }
         }
 
