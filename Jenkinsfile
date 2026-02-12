@@ -1,11 +1,33 @@
 pipeline{
     agent {label "dev"} ;
+
+     tools {
+        dependencyCheck 'OWASP-DC'                                            /* OWASP :-  Your project uses third-party libraries (like Flask, requests, MySQL connector).
+                                                                                            Some versions may have known security vulnerabilities. */
+
+                                                                                          /*Solution:
+                                                                                               Use OWASP Dependency-Check in Jenkins pipeline.*/
+    }
+    
     stages{
         stage("Code Clone"){
             steps{
                 git url : "https://github.com/gopeshthakare13/two-tier-flask-app.git"
             }
         }
+        
+        stage("Trivy File System Scan){                                                /*Trivy Trivy is a security scanner for code, containers, Kubernetes, and IaC */
+            steps{
+               sh "trivy fs . --format json -o results.json"
+            }
+        }
+
+        stage("OWASP Dependency Check") {
+            steps {
+                dependencyCheck additionalArguments: '--scan .', odcInstallation: 'OWASP-DC'
+            }
+        }
+              
          stage("Installation Command To Docker Build"){
             steps{
                 sh '''
@@ -17,16 +39,19 @@ pipeline{
                    '''
             }
         }
+              
         stage("Code Build"){
             steps{
                 sh "docker build -t two-tier-flask-app ."
             }
         }
+              
         stage("Test Case"){
             steps{
                 echo "Developer Write Test Cases Here ...."
             }
         }
+              
        stage("Docker Push") {
              steps {
                  withCredentials([usernamePassword(
@@ -42,6 +67,7 @@ pipeline{
                 }
            }
        }
+              
         stage("Deploy"){
             steps{
                sh "docker compose down || true"
@@ -51,6 +77,10 @@ pipeline{
         }
     }
 post {                           /* Email Notifiaction */
+
+    always {
+            dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+        }
     success {
         mail(
             to: "gopesh7710@gmail.com",
