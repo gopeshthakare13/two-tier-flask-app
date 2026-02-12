@@ -1,75 +1,78 @@
-pipeline{
-    agent {label "dev"} ;
-    stages{
-        stage("Code Clone"){
-            steps{
-                git url : "https://github.com/gopeshthakare13/two-tier-flask-app.git"
+pipeline {
+    agent { label "dev" }
+
+    stages {
+        stage("Code Clone") {
+            steps {
+                git url: "https://github.com/gopeshthakare13/two-tier-flask-app.git"
             }
         }
-        stages{
-        stage("Trivy File System Scan"){
-            steps{
+
+        stage("Trivy File System Scan") {
+            steps {
                 sh "trivy fs . -o results.json"
             }
         }
-         stage("Installation Command To Docker Build"){
-            steps{
+
+        stage("Install Docker") {
+            steps {
                 sh '''
                   sudo apt update
                   sudo apt install -y docker.io docker-compose-v2
                   sudo usermod -aG docker ubuntu
-                  sudo usermod -aG docker $USER
-                  newgrp docker
-                   '''
+                '''
             }
         }
-        stage("Code Build"){
-            steps{
+
+        stage("Build Docker Image") {
+            steps {
                 sh "docker build -t two-tier-flask-app ."
             }
         }
-        stage("Test Case"){
-            steps{
-                echo "Developer Write Test Cases Here ...."
+
+        stage("Run Test Cases") {
+            steps {
+                echo "Developer writes test cases here..."
             }
         }
-       stage("Docker Push") {
-             steps {
-                 withCredentials([usernamePassword(
-                 credentialsId: "dockerHubCreds",
-                 passwordVariable: "DOCKER_PASS",
-                 usernameVariable: "DOCKER_USER"
-               )]) {
-                 sh '''
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    docker tag two-tier-flask-app $DOCKER_USER/two-tier-flask-app:latest
-                    docker push $DOCKER_USER/two-tier-flask-app:latest
+
+        stage("Push to Docker Hub") {
+            steps {
+                withCredentials([usernamePassword(credentialsId: "dockerHubCreds", usernameVariable: "DOCKER_USER", passwordVariable: "DOCKER_PASS")]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker tag two-tier-flask-app $DOCKER_USER/two-tier-flask-app:latest
+                        docker push $DOCKER_USER/two-tier-flask-app:latest
                     '''
                 }
-           }
-       }
-        stage("Deploy"){
-            steps{
-               sh "docker compose down || true"
-               sh "docker rm -f mysql || true"
-               sh "docker compose up -d"
+            }
+        }
+
+        stage("Deploy") {
+            steps {
+                sh '''
+                    docker compose down || true
+                    docker rm -f mysql || true
+                    docker compose up -d
+                '''
             }
         }
     }
-post {                           /* Email Notifiaction */
-    success {
-        mail(
-            to: "gopesh7710@gmail.com",
-            subject: "Build Successful",
-            body: "Good: Your Build Was Successful!"
-        )
+
+    post {
+        success {
+            mail(
+                to: "gopesh7710@gmail.com",
+                subject: "Build Successful",
+                body: "Good: Your Build Was Successful!"
+            )
+        }
+        failure {
+            mail(
+                to: "gopesh7710@gmail.com",
+                subject: "Build Failed",
+                body: "Bad: Your Build Failed!"
+            )
+        }
     }
-    failure {
-        mail(
-            to: "gopesh7710@gmail.com",
-            subject: "Build Failed",
-            body: "Bad: Your Build Failed!"
-        )
-    }
-}
 }
