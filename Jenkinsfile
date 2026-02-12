@@ -1,10 +1,6 @@
 pipeline {
     agent { label "dev" }
 
-    tools {
-        dependencyCheck 'OWASP-DC'
-    }
-
     stages {
 
         stage("Code Clone") {
@@ -85,4 +81,3 @@ pipeline {
         }
     }
 }
-
