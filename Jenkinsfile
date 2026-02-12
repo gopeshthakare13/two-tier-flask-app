@@ -14,18 +14,13 @@ pipeline {
                 sh "trivy fs . --format json -o results.json"
             }
         }
-
        stage('OWASP Dependency Check') {
-           steps {
-                dependencyCheck odcInstallation: 'OWASP',
-                additionalArguments: '--scan . --format XML',
-                outdir: 'dependency-check-report'
-
-               dependencyCheckPublisher pattern: 'dependency-check-report/dependency-check-report.xml'
-           }
-        }
-
-
+            steps {
+                 dependencyCheck odcInstallation: 'OWASP',
+                 additionalArguments: '--scan . --format XML'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+              }
+         }
         stage("Code Build") {
             steps {
                 sh "docker build -t two-tier-flask-app ."
