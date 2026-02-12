@@ -44,8 +44,26 @@ pipeline{
        }
         stage("Deploy"){
             steps{
-                sh "docker compose up -d"
+               sh "docker compose down || true"
+               sh "docker rm -f mysql || true"
+               sh "docker compose up -d"
             }
         }
     }
+post {                           /* Email Notifiaction */
+    success {
+        mail(
+            to: "gopesh7710@gmail.com",
+            subject: "Build Successful",
+            body: "Good: Your Build Was Successful!"
+        )
+    }
+    failure {
+        mail(
+            to: "gopesh7710@gmail.com",
+            subject: "Build Failed",
+            body: "Bad: Your Build Failed!"
+        )
+    }
+}
 }
