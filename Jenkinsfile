@@ -14,13 +14,15 @@ pipeline {
                 sh "trivy fs . --format json -o results.json"
             }
         }
-       stage('OWASP Dependency Check') {
-            steps {
-                 dependencyCheck odcInstallation: 'OWASP',
-                 additionalArguments: '--scan . --format XML'
-                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-              }
-         }
+     stage('OWASP Dependency Check') {
+           steps {
+           withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_KEY')]) {
+            dependencyCheck odcInstallation: 'OWASP',
+            additionalArguments: "--scan . --format XML --nvdApiKey $NVD_KEY"
+        }
+          dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+        }
+    }
         stage("Code Build") {
             steps {
                 sh "docker build -t two-tier-flask-app ."
@@ -59,11 +61,6 @@ pipeline {
     }
 
     post {
-
-        always {
-            dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-        }
-
         success {
             mail(
                 to: "gopesh7710@gmail.com",
